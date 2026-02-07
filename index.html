@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Letter Tray Tiles</title>
+
+  <style>
+    body{
+      margin:0;
+      padding:0;
+      background:#f7f8fb;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:#1f2937;
+    }
+
+    header{
+      padding:14px 18px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      background:#ffffff;
+      border-bottom:1px solid #d6dde6;
+    }
+
+    h1{
+      margin:0;
+      font-size:16px;
+      font-weight:650;
+    }
+
+    button{
+      padding:8px 14px;
+      border-radius:10px;
+      border:1px solid #cfd6df;
+      background:#ffffff;
+      cursor:pointer;
+      font-size:13px;
+    }
+
+    main{
+      padding:18px;
+      max-width:1200px;
+      margin:0 auto;
+    }
+
+    .tray{
+      background:#ffffff;
+      border:2px solid #cfd6df;
+      border-radius:16px;
+      padding:16px;
+      min-height:120px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+    }
+
+    .zones{
+      margin-top:20px;
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap:16px;
+    }
+
+    .zone{
+      background:#ffffff;
+      border:2px dashed #cfd6df;
+      border-radius:14px;
+      padding:12px;
+      min-height:100px;
+    }
+
+    .zone h2{
+      margin:0 0 10px 0;
+      font-size:14px;
+      font-weight:650;
+    }
+
+    .tile{
+      width:68px;
+      height:68px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:26px;
+      font-weight:700;
+      cursor:grab;
+      user-select:none;
+      border:1px solid #cfd6df;
+      box-shadow:0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .tile:active{
+      cursor:grabbing;
+    }
+
+    .vowel{ background:#f7c6c7; }
+    .consonant{ background:#f9efc7; }
+    .blend{ background:#f9efc7; }
+    .ending{ background:#cfe9d6; }
+
+    .drop-active{
+      background:#f2f6ff;
+      border-color:#7aa7ff;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Letter Tray</h1>
+    <button id="reset">Reset Tray</button>
+  </header>
+
+  <main>
+    <section>
+      <h2>Tray</h2>
+      <div class="tray dropzone" id="tray"></div>
+    </section>
+
+    <section class="zones">
+      <div class="zone dropzone">
+        <h2>Sounds</h2>
+      </div>
+      <div class="zone dropzone">
+        <h2>Letters</h2>
+      </div>
+      <div class="zone dropzone">
+        <h2>Syllables / Endings</h2>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const TILE_DATA = [
+      { id:"a", text:"a", type:"vowel" },
+      { id:"e", text:"e", type:"vowel" },
+      { id:"i", text:"i", type:"vowel" },
+      { id:"o", text:"o", type:"vowel" },
+      { id:"u", text:"u", type:"vowel" },
+
+      { id:"b", text:"b", type:"consonant" },
+      { id:"c", text:"c", type:"consonant" },
+      { id:"d", text:"d", type:"consonant" },
+      { id:"f", text:"f", type:"consonant" },
+      { id:"g", text:"g", type:"consonant" },
+      { id:"h", text:"h", type:"consonant" },
+      { id:"k", text:"k", type:"consonant" },
+      { id:"l", text:"l", type:"consonant" },
+      { id:"m", text:"m", type:"consonant" },
+      { id:"n", text:"n", type:"consonant" },
+      { id:"p", text:"p", type:"consonant" },
+      { id:"r", text:"r", type:"consonant" },
+      { id:"s", text:"s", type:"consonant" },
+      { id:"t", text:"t", type:"consonant" },
+
+      { id:"wh", text:"wh", type:"blend" },
+      { id:"ch", text:"ch", type:"blend" },
+      { id:"sh", text:"sh", type:"blend" },
+      { id:"th", text:"th", type:"blend" },
+      { id:"ck", text:"ck", type:"blend" },
+
+      { id:"all", text:"all", type:"ending" },
+      { id:"an", text:"an", type:"ending" },
+      { id:"am", text:"am", type:"ending" },
+      { id:"ang", text:"ang", type:"ending" },
+      { id:"ing", text:"ing", type:"ending" },
+      { id:"ong", text:"ong", type:"ending" },
+      { id:"ung", text:"ung", type:"ending" },
+      { id:"ank", text:"ank", type:"ending" },
+      { id:"ink", text:"ink", type:"ending" },
+      { id:"onk", text:"onk", type:"ending" },
+      { id:"unk", text:"unk", type:"ending" }
+    ];
+
+    const tray = document.getElementById("tray");
+    const zones = document.querySelectorAll(".dropzone");
+    const tileMap = new Map();
+
+    function createTile(data){
+      const tile = document.createElement("div");
+      tile.className = `tile ${data.type}`;
+      tile.textContent = data.text;
+      tile.draggable = true;
+      tile.dataset.id = data.id;
+
+      tile.addEventListener("click", () => tray.appendChild(tile));
+
+      tile.addEventListener("dragstart", e => {
+        e.dataTransfer.setData("text/plain", data.id);
+      });
+
+      return tile;
+    }
+
+    TILE_DATA.forEach(t => {
+      const tile = createTile(t);
+      tileMap.set(t.id, tile);
+      tray.appendChild(tile);
+    });
+
+    zones.forEach(zone => {
+      zone.addEventListener("dragover", e => {
+        e.preventDefault();
+        zone.classList.add("drop-active");
+      });
+
+      zone.addEventListener("dragleave", () => {
+        zone.classList.remove("drop-active");
+      });
+
+      zone.addEventListener("drop", e => {
+        e.preventDefault();
+        zone.classList.remove("drop-active");
+        const id = e.dataTransfer.getData("text/plain");
+        const tile = tileMap.get(id);
+        if(tile) zone.appendChild(tile);
+      });
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      TILE_DATA.forEach(t => tray.appendChild(tileMap.get(t.id)));
+    });
+  </script>
+</body>
+</html>
