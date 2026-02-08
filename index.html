@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Letter Tray Tiles</title>
+  <title>Letter Tray</title>
 
   <style>
     :root{
@@ -62,14 +62,12 @@
       margin:4px 0 0 0;
     }
 
-    /* Dropzones use a grid so tiles "snap" into neat rows automatically */
     .dropzone{
       background:var(--card);
       border:2px dashed var(--border);
       border-radius:var(--radius);
       padding:12px;
       min-height:120px;
-
       display:grid;
       grid-template-columns: repeat(auto-fill, minmax(var(--tile), var(--tile)));
       grid-auto-rows: var(--tile);
@@ -83,7 +81,6 @@
       border-color:var(--active);
     }
 
-    /* Tray is a template bank, so it looks a bit more solid */
     .tray{
       border-style:solid;
       border-width:2px;
@@ -97,13 +94,7 @@
     }
 
     @media (min-width: 900px){
-      .layout{
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    .panel{
-      background:transparent;
+      .layout{ grid-template-columns: 1fr 1fr; }
     }
 
     .tile{
@@ -123,7 +114,6 @@
     }
     .tile:active{ cursor:grabbing; }
 
-    /* Template tiles (in tray) show a subtle corner mark */
     .tile.template::after{
       content:"";
       position:absolute;
@@ -135,239 +125,182 @@
       right:8px;
     }
 
-    /* COLOR RULES */
-    .vowel{ background:#f7c6c7; }       /* light red */
-    .consonant{ background:#f9efc7; }   /* light yellow */
-    .blend{ background:#f9efc7; }       /* same light yellow */
-    .ending{ background:#cfe9d6; }      /* light green */
+    /* COLORS */
+    .vowel{ background:#f7c6c7; }
+    .consonant{ background:#f9efc7; }
+    .blend{ background:#f9efc7; }
+    .ending{ background:#cfe9d6; }
   </style>
 </head>
 
 <body>
-  <div class="fsWrap" id="fsWrap">
-    <header>
-      <h1>Letter Tray</h1>
-      <div class="btnRow">
-        <button id="fullscreenBtn">Full screen</button>
-        <button id="clearWorkBtn">Clear workspace</button>
-      </div>
-    </header>
+<div id="fsWrap">
+<header>
+  <h1>Letter Tray</h1>
+  <div class="btnRow">
+    <button id="fullscreenBtn">Full screen</button>
+    <button id="clearWorkBtn">Clear workspace</button>
+  </div>
+</header>
 
-    <main>
-      <section>
-        <p class="sectionTitle">Tray (drag from here as many times as you want)</p>
-        <p class="hint">To remove a tile, drop it anywhere on the tray.</p>
-        <div class="dropzone tray" id="tray" aria-label="tray"></div>
-      </section>
+<main>
+  <section>
+    <p class="sectionTitle">Tray (alphabetical order)</p>
+    <p class="hint">Drag from the tray to create tiles. Drop tiles back here to remove them.</p>
+    <div class="dropzone tray" id="tray"></div>
+  </section>
 
-      <div class="layout">
-        <section class="panel">
-          <p class="sectionTitle">Build words</p>
-          <p class="hint">Drag tiles here to build a word. Drag to reorder.</p>
-          <div class="dropzone workzone" id="buildZone" aria-label="build words"></div>
-        </section>
-
-        <section class="panel">
-          <p class="sectionTitle">Break apart</p>
-          <p class="hint">Use this space to split words into parts, change endings, or compare patterns.</p>
-          <div class="dropzone workzone" id="breakZone" aria-label="break apart"></div>
-        </section>
-      </div>
-
-      <section style="margin-top:16px;">
-        <p class="sectionTitle">Extra workspace</p>
-        <p class="hint">A blank area for sorting, making multiple words, or staging tiles.</p>
-        <div class="dropzone workzone" id="extraZone" aria-label="extra workspace"></div>
-      </section>
-    </main>
+  <div class="layout">
+    <section>
+      <p class="sectionTitle">Build words</p>
+      <div class="dropzone workzone"></div>
+    </section>
+    <section>
+      <p class="sectionTitle">Break apart</p>
+      <div class="dropzone workzone"></div>
+    </section>
   </div>
 
-  <script>
-    const TILE_DATA = [
-      // VOWELS
-      { id:"a", text:"a", type:"vowel" },
-      { id:"e", text:"e", type:"vowel" },
-      { id:"i", text:"i", type:"vowel" },
-      { id:"o", text:"o", type:"vowel" },
-      { id:"u", text:"u", type:"vowel" },
+  <section style="margin-top:16px;">
+    <p class="sectionTitle">Extra workspace</p>
+    <div class="dropzone workzone"></div>
+  </section>
+</main>
+</div>
 
-      // CONSONANTS
-      { id:"b", text:"b", type:"consonant" },
-      { id:"c", text:"c", type:"consonant" },
-      { id:"d", text:"d", type:"consonant" },
-      { id:"f", text:"f", type:"consonant" },
-      { id:"g", text:"g", type:"consonant" },
-      { id:"h", text:"h", type:"consonant" },
-      { id:"j", text:"j", type:"consonant" },
-      { id:"k", text:"k", type:"consonant" },
-      { id:"l", text:"l", type:"consonant" },
-      { id:"m", text:"m", type:"consonant" },
-      { id:"n", text:"n", type:"consonant" },
-      { id:"p", text:"p", type:"consonant" },
-      { id:"q", text:"q", type:"consonant" },
-      { id:"r", text:"r", type:"consonant" },
-      { id:"s", text:"s", type:"consonant" },
-      { id:"t", text:"t", type:"consonant" },
-      { id:"v", text:"v", type:"consonant" },
-      { id:"w", text:"w", type:"consonant" },
-      { id:"x", text:"x", type:"consonant" },
-      { id:"y", text:"y", type:"consonant" },
-      { id:"z", text:"z", type:"consonant" },
+<script>
+const TILE_DATA = [
+  // LETTERS (alphabetical, q shown as qu)
+  { id:"a", text:"a", type:"vowel" },
+  { id:"b", text:"b", type:"consonant" },
+  { id:"c", text:"c", type:"consonant" },
+  { id:"d", text:"d", type:"consonant" },
+  { id:"e", text:"e", type:"vowel" },
+  { id:"f", text:"f", type:"consonant" },
+  { id:"g", text:"g", type:"consonant" },
+  { id:"h", text:"h", type:"consonant" },
+  { id:"i", text:"i", type:"vowel" },
+  { id:"j", text:"j", type:"consonant" },
+  { id:"k", text:"k", type:"consonant" },
+  { id:"l", text:"l", type:"consonant" },
+  { id:"m", text:"m", type:"consonant" },
+  { id:"n", text:"n", type:"consonant" },
+  { id:"o", text:"o", type:"vowel" },
+  { id:"p", text:"p", type:"consonant" },
+  { id:"qu", text:"qu", type:"consonant" },
+  { id:"r", text:"r", type:"consonant" },
+  { id:"s", text:"s", type:"consonant" },
+  { id:"t", text:"t", type:"consonant" },
+  { id:"u", text:"u", type:"vowel" },
+  { id:"v", text:"v", type:"consonant" },
+  { id:"w", text:"w", type:"consonant" },
+  { id:"x", text:"x", type:"consonant" },
+  { id:"y", text:"y", type:"consonant" },
+  { id:"z", text:"z", type:"consonant" },
 
-      // DIGRAPHS / BLENDS
-      { id:"wh", text:"wh", type:"blend" },
-      { id:"ch", text:"ch", type:"blend" },
-      { id:"sh", text:"sh", type:"blend" },
-      { id:"th", text:"th", type:"blend" },
-      { id:"ck", text:"ck", type:"blend" },
+  // BLENDS (after letters)
+  { id:"ch", text:"ch", type:"blend" },
+  { id:"sh", text:"sh", type:"blend" },
+  { id:"th", text:"th", type:"blend" },
+  { id:"wh", text:"wh", type:"blend" },
+  { id:"ck", text:"ck", type:"blend" },
 
-      // ENDINGS
-      { id:"all", text:"all", type:"ending" },
-      { id:"an", text:"an", type:"ending" },
-      { id:"am", text:"am", type:"ending" },
-      { id:"ang", text:"ang", type:"ending" },
-      { id:"ing", text:"ing", type:"ending" },
-      { id:"ong", text:"ong", type:"ending" },
-      { id:"ung", text:"ung", type:"ending" },
-      { id:"ank", text:"ank", type:"ending" },
-      { id:"ink", text:"ink", type:"ending" },
-      { id:"onk", text:"onk", type:"ending" },
-      { id:"unk", text:"unk", type:"ending" }
-    ];
+  // ENDINGS (green, at end)
+  { id:"all", text:"all", type:"ending" },
+  { id:"an", text:"an", type:"ending" },
+  { id:"am", text:"am", type:"ending" },
+  { id:"ang", text:"ang", type:"ending" },
+  { id:"ing", text:"ing", type:"ending" },
+  { id:"ong", text:"ong", type:"ending" },
+  { id:"ung", text:"ung", type:"ending" },
+  { id:"ank", text:"ank", type:"ending" },
+  { id:"ink", text:"ink", type:"ending" },
+  { id:"onk", text:"onk", type:"ending" },
+  { id:"unk", text:"unk", type:"ending" }
+];
 
-    const tray = document.getElementById("tray");
-    const workZones = Array.from(document.querySelectorAll(".workzone"));
-    const allZones = [tray, ...workZones];
+const tray = document.getElementById("tray");
+const workZones = Array.from(document.querySelectorAll(".workzone"));
+const allZones = [tray, ...workZones];
 
-    let draggedEl = null;
+let draggedEl = null;
+const defById = new Map(TILE_DATA.map(t => [t.id, t]));
 
-    function uid(){
-      return "tile_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+function uid(){
+  return "tile_" + Math.random().toString(16).slice(2);
+}
+
+function makeTile(def, template){
+  const el = document.createElement("div");
+  el.className = `tile ${def.type}` + (template ? " template" : "");
+  el.textContent = def.text;
+  el.draggable = true;
+  el.dataset.tileId = def.id;
+  el.dataset.template = template ? "1" : "0";
+  if(!template) el.dataset.instanceId = uid();
+
+  el.addEventListener("click", () => {
+    if(el.dataset.template === "1") return;
+    el.remove();
+  });
+
+  el.addEventListener("dragstart", e => {
+    draggedEl = el;
+    const payload = {
+      kind: el.dataset.template === "1" ? "template" : "instance",
+      tileId: def.id
+    };
+    e.dataTransfer.setData("text/plain", JSON.stringify(payload));
+  });
+
+  el.addEventListener("dragend", () => {
+    draggedEl = null;
+    allZones.forEach(z => z.classList.remove("active"));
+  });
+
+  return el;
+}
+
+TILE_DATA.forEach(def => tray.appendChild(makeTile(def, true)));
+
+allZones.forEach(zone => {
+  zone.addEventListener("dragover", e => {
+    e.preventDefault();
+    zone.classList.add("active");
+  });
+
+  zone.addEventListener("dragleave", () => zone.classList.remove("active"));
+
+  zone.addEventListener("drop", e => {
+    e.preventDefault();
+    zone.classList.remove("active");
+
+    const payload = JSON.parse(e.dataTransfer.getData("text/plain"));
+    if(zone === tray){
+      if(draggedEl && draggedEl.dataset.template === "0") draggedEl.remove();
+      return;
     }
 
-    const defById = new Map(TILE_DATA.map(t => [t.id, t]));
-
-    function createTileElement(tileDef, isTemplate){
-      const el = document.createElement("div");
-      el.className = `tile ${tileDef.type}` + (isTemplate ? " template" : "");
-      el.textContent = tileDef.text;
-      el.draggable = true;
-
-      el.dataset.tileId = tileDef.id;
-      el.dataset.isTemplate = isTemplate ? "1" : "0";
-      if (!isTemplate) el.dataset.instanceId = uid();
-
-      // Click removes instances (same as dropping on tray)
-      el.addEventListener("click", () => {
-        if (el.dataset.isTemplate === "1") return;
-        el.remove();
-      });
-
-      el.addEventListener("dragstart", (e) => {
-        draggedEl = el;
-
-        const payload = {
-          kind: (el.dataset.isTemplate === "1") ? "template" : "instance",
-          tileId: el.dataset.tileId,
-          instanceId: el.dataset.instanceId || null
-        };
-
-        const payloadStr = JSON.stringify(payload);
-        e.dataTransfer.setData("application/json", payloadStr);
-        e.dataTransfer.setData("text/plain", payloadStr);
-
-        try{
-          const clone = el.cloneNode(true);
-          clone.style.position = "absolute";
-          clone.style.top = "-9999px";
-          clone.style.left = "-9999px";
-          document.body.appendChild(clone);
-          e.dataTransfer.setDragImage(clone, 34, 34);
-          setTimeout(() => clone.remove(), 0);
-        }catch(_){}
-      });
-
-      el.addEventListener("dragend", () => {
-        draggedEl = null;
-        allZones.forEach(z => z.classList.remove("active"));
-      });
-
-      return el;
+    if(payload.kind === "template"){
+      const def = defById.get(payload.tileId);
+      zone.appendChild(makeTile(def, false));
+    } else if(draggedEl){
+      zone.appendChild(draggedEl);
     }
+  });
+});
 
-    // Fill tray with one template tile of each kind
-    TILE_DATA.forEach(def => tray.appendChild(createTileElement(def, true)));
+document.getElementById("clearWorkBtn").addEventListener("click", () => {
+  workZones.forEach(z => z.innerHTML = "");
+});
 
-    allZones.forEach(zone => {
-      zone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        zone.classList.add("active");
+const fsBtn = document.getElementById("fullscreenBtn");
+const fsWrap = document.getElementById("fsWrap");
 
-        // Simple reorder in work zones by hovering over another tile
-        const overTile = (e.target && e.target.classList && e.target.classList.contains("tile")) ? e.target : null;
-        if (!overTile) return;
-        if (zone === tray) return;
-
-        if (draggedEl && draggedEl.dataset.isTemplate === "0" && overTile !== draggedEl){
-          zone.insertBefore(draggedEl, overTile);
-        }
-      });
-
-      zone.addEventListener("dragleave", () => zone.classList.remove("active"));
-
-      zone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        zone.classList.remove("active");
-
-        let payloadStr = e.dataTransfer.getData("application/json") || e.dataTransfer.getData("text/plain");
-        let payload = null;
-        try{ payload = JSON.parse(payloadStr); }catch(_){ payload = null; }
-        if (!payload || !payload.tileId) return;
-
-        // Dropping on tray deletes instances and ignores templates
-        if (zone === tray){
-          if (payload.kind === "instance" && draggedEl) draggedEl.remove();
-          return;
-        }
-
-        // Dropping into workspace zones
-        if (payload.kind === "template"){
-          const def = defById.get(payload.tileId);
-          if (!def) return;
-          zone.appendChild(createTileElement(def, false));
-          return;
-        }
-
-        if (payload.kind === "instance" && draggedEl){
-          zone.appendChild(draggedEl);
-        }
-      });
-    });
-
-    // Clear workspace
-    document.getElementById("clearWorkBtn").addEventListener("click", () => {
-      workZones.forEach(z => z.querySelectorAll(".tile").forEach(t => t.remove()));
-    });
-
-    // Fullscreen toggle
-    const fsBtn = document.getElementById("fullscreenBtn");
-    const fsWrap = document.getElementById("fsWrap");
-
-    function isFullscreen(){ return !!document.fullscreenElement; }
-    function updateFsButton(){
-      fsBtn.textContent = isFullscreen() ? "Exit full screen" : "Full screen";
-    }
-
-    fsBtn.addEventListener("click", async () => {
-      try{
-        if (!isFullscreen()) await fsWrap.requestFullscreen();
-        else await document.exitFullscreen();
-      }catch(_){}
-      updateFsButton();
-    });
-
-    document.addEventListener("fullscreenchange", updateFsButton);
-    updateFsButton();
-  </script>
+fsBtn.addEventListener("click", () => {
+  if(!document.fullscreenElement) fsWrap.requestFullscreen();
+  else document.exitFullscreen();
+});
+</script>
 </body>
 </html>
