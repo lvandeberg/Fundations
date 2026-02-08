@@ -30,11 +30,13 @@
       border-bottom:1px solid var(--border2);
       position:sticky;
       top:0;
-      z-index:10;
+      z-index:20;
+      gap:12px;
+      flex-wrap:wrap;
     }
     h1{ margin:0; font-size:16px; font-weight:650; }
 
-    .btnRow{ display:flex; gap:10px; align-items:center; }
+    .btnRow{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     button{
       padding:8px 14px;
       border-radius:10px;
@@ -43,6 +45,16 @@
       cursor:pointer;
       font-size:13px;
       box-shadow:var(--shadow);
+      white-space:nowrap;
+      touch-action: manipulation;
+    }
+    button.primary{
+      border-color:#9bbcff;
+      background:#f2f6ff;
+    }
+    button.toggled{
+      border-color:#5b8cff;
+      background:#eaf1ff;
     }
 
     main{
@@ -60,6 +72,7 @@
       font-size:12px;
       color:#6b7280;
       margin:4px 0 0 0;
+      line-height:1.3;
     }
 
     .dropzone{
@@ -75,26 +88,32 @@
       align-content:start;
       justify-content:start;
     }
-
     .dropzone.active{
       background:#f2f6ff;
       border-color:var(--active);
     }
-
     .tray{
       border-style:solid;
       border-width:2px;
     }
 
-    .layout{
-      margin-top:18px;
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:16px;
+    /* Workspace wrapper for drawing canvas overlay */
+    .workWrap{
+      position:relative;
     }
-
-    @media (min-width: 900px){
-      .layout{ grid-template-columns: 1fr 1fr; }
+    #workspace{
+      position:relative;
+      z-index:1;
+    }
+    #inkCanvas{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:2;
+      border-radius:var(--radius);
+      pointer-events:auto;
+      touch-action:none;
     }
 
     .tile{
@@ -111,6 +130,8 @@
       box-shadow:0 1px 6px rgba(0,0,0,.08);
       cursor:grab;
       position:relative;
+      overflow:hidden;
+      touch-action:none;
     }
     .tile:active{ cursor:grabbing; }
 
@@ -125,52 +146,102 @@
       right:8px;
     }
 
-    /* COLORS */
     .vowel{ background:#f7c6c7; }
     .consonant{ background:#f9efc7; }
     .blend{ background:#f9efc7; }
     .ending{ background:#cfe9d6; }
+    .breaker{ background:#eef2f7; }
+
+    /* Mini tool row near workspace */
+    .workTools{
+      margin:12px 0 8px 0;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .workTools .toolHint{
+      font-size:12px;
+      color:#6b7280;
+    }
+
+    .keyBox{
+      margin-top:14px;
+      padding:12px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:var(--card);
+      box-shadow:var(--shadow);
+    }
+    .keyGrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:8px;
+    }
+    @media (min-width: 900px){
+      .keyGrid{ grid-template-columns: 1fr 1fr; }
+    }
+    .keyItem{
+      font-size:13px;
+      line-height:1.35;
+      color:#374151;
+    }
   </style>
 </head>
 
 <body>
 <div id="fsWrap">
-<header>
-  <h1>Letter Tray</h1>
-  <div class="btnRow">
-    <button id="fullscreenBtn">Full screen</button>
-    <button id="clearWorkBtn">Clear workspace</button>
-  </div>
-</header>
+  <header>
+    <h1>Letter Tray</h1>
+    <div class="btnRow">
+      <button id="fullscreenBtn">Full screen</button>
+      <button id="clearWorkBtn">Clear workspace</button>
+    </div>
+  </header>
 
-<main>
-  <section>
-    <p class="sectionTitle">Tray (alphabetical order)</p>
-    <p class="hint">Drag from the tray to create tiles. Drop tiles back here to remove them.</p>
-    <div class="dropzone tray" id="tray"></div>
-  </section>
-
-  <div class="layout">
+  <main>
     <section>
-      <p class="sectionTitle">Build words</p>
-      <div class="dropzone workzone"></div>
+      <p class="sectionTitle">Tray (alphabetical order)</p>
+      <p class="hint">Drag from the tray to create tiles. Drop tiles back here to remove them.</p>
+      <div class="dropzone tray" id="tray"></div>
     </section>
-    <section>
-      <p class="sectionTitle">Break apart</p>
-      <div class="dropzone workzone"></div>
-    </section>
-  </div>
 
-  <section style="margin-top:16px;">
-    <p class="sectionTitle">Extra workspace</p>
-    <div class="dropzone workzone"></div>
-  </section>
-</main>
+    <div class="keyBox">
+      <p class="sectionTitle" style="margin-bottom:6px;">Marking key</p>
+      <div class="keyGrid">
+        <div class="keyItem"><strong>Base word:</strong> Underline the base word.</div>
+        <div class="keyItem"><strong>Prefix / Suffix:</strong> Circle the prefix or suffix.</div>
+        <div class="keyItem"><strong>Vowels:</strong> Dot or mark above vowels.</div>
+        <div class="keyItem"><strong>Syllables:</strong> Add a <strong>|</strong> break tile between syllables, then circle each syllable.</div>
+        <div class="keyItem"><strong>Remove tiles:</strong> Drop a tile back onto the tray to delete it.</div>
+        <div class="keyItem"><strong>Pen + Eraser:</strong> Use the buttons by the workspace to write and erase.</div>
+      </div>
+    </div>
+
+    <section style="margin-top:14px;">
+      <p class="sectionTitle">Workspace</p>
+      <p class="hint">Drag tiles to build words. Use the pen to underline and circle. Use eraser to remove pen marks.</p>
+
+      <div class="workTools" aria-label="workspace tools">
+        <button id="penBtn" class="primary toggled">Pen</button>
+        <button id="eraserBtn">Eraser</button>
+        <button id="clearInkBtn">Clear pen</button>
+        <button id="addBreakBtn" class="primary">Add | break</button>
+        <span class="toolHint">Tip: On touch screens, use one finger to draw. Drag tiles with a longer press then move.</span>
+      </div>
+
+      <div class="workWrap">
+        <div class="dropzone workzone" id="workspace"></div>
+        <canvas id="inkCanvas" aria-label="drawing canvas"></canvas>
+      </div>
+    </section>
+  </main>
 </div>
 
 <script>
+let toolMode = "pen"; // "pen" or "eraser"
+
 const TILE_DATA = [
-  // LETTERS (alphabetical, q shown as qu)
   { id:"a", text:"a", type:"vowel" },
   { id:"b", text:"b", type:"consonant" },
   { id:"c", text:"c", type:"consonant" },
@@ -198,14 +269,12 @@ const TILE_DATA = [
   { id:"y", text:"y", type:"consonant" },
   { id:"z", text:"z", type:"consonant" },
 
-  // BLENDS (after letters)
   { id:"ch", text:"ch", type:"blend" },
   { id:"sh", text:"sh", type:"blend" },
   { id:"th", text:"th", type:"blend" },
   { id:"wh", text:"wh", type:"blend" },
   { id:"ck", text:"ck", type:"blend" },
 
-  // ENDINGS (green, at end)
   { id:"all", text:"all", type:"ending" },
   { id:"an", text:"an", type:"ending" },
   { id:"am", text:"am", type:"ending" },
@@ -220,14 +289,14 @@ const TILE_DATA = [
 ];
 
 const tray = document.getElementById("tray");
-const workZones = Array.from(document.querySelectorAll(".workzone"));
-const allZones = [tray, ...workZones];
+const workspace = document.getElementById("workspace");
+const allZones = [tray, workspace];
 
 let draggedEl = null;
 const defById = new Map(TILE_DATA.map(t => [t.id, t]));
 
 function uid(){
-  return "tile_" + Math.random().toString(16).slice(2);
+  return "tile_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
 }
 
 function makeTile(def, template){
@@ -239,7 +308,7 @@ function makeTile(def, template){
   el.dataset.template = template ? "1" : "0";
   if(!template) el.dataset.instanceId = uid();
 
-  el.addEventListener("click", () => {
+  el.addEventListener("dblclick", () => {
     if(el.dataset.template === "1") return;
     el.remove();
   });
@@ -250,7 +319,9 @@ function makeTile(def, template){
       kind: el.dataset.template === "1" ? "template" : "instance",
       tileId: def.id
     };
-    e.dataTransfer.setData("text/plain", JSON.stringify(payload));
+    const payloadStr = JSON.stringify(payload);
+    e.dataTransfer.setData("application/json", payloadStr);
+    e.dataTransfer.setData("text/plain", payloadStr);
   });
 
   el.addEventListener("dragend", () => {
@@ -261,12 +332,23 @@ function makeTile(def, template){
   return el;
 }
 
+// Build tray
 TILE_DATA.forEach(def => tray.appendChild(makeTile(def, true)));
 
+// Drag/drop
 allZones.forEach(zone => {
   zone.addEventListener("dragover", e => {
     e.preventDefault();
     zone.classList.add("active");
+
+    // Reorder within workspace by hovering over another tile
+    if(zone !== workspace) return;
+    const overTile = (e.target && e.target.classList && e.target.classList.contains("tile")) ? e.target : null;
+    if(!overTile) return;
+
+    if(draggedEl && draggedEl.dataset.template === "0" && overTile !== draggedEl){
+      workspace.insertBefore(draggedEl, overTile);
+    }
   });
 
   zone.addEventListener("dragleave", () => zone.classList.remove("active"));
@@ -275,32 +357,144 @@ allZones.forEach(zone => {
     e.preventDefault();
     zone.classList.remove("active");
 
-    const payload = JSON.parse(e.dataTransfer.getData("text/plain"));
+    const payloadStr = e.dataTransfer.getData("application/json") || e.dataTransfer.getData("text/plain");
+    let payload = null;
+    try{ payload = JSON.parse(payloadStr); }catch(_){ payload = null; }
+    if(!payload || !payload.tileId) return;
+
+    // Drop on tray deletes instances
     if(zone === tray){
-      if(draggedEl && draggedEl.dataset.template === "0") draggedEl.remove();
+      if(draggedEl && draggedEl.dataset.template === "0"){
+        draggedEl.remove();
+      }
       return;
     }
 
+    // Drop into workspace
     if(payload.kind === "template"){
       const def = defById.get(payload.tileId);
-      zone.appendChild(makeTile(def, false));
+      if(!def) return;
+      workspace.appendChild(makeTile(def, false));
     } else if(draggedEl){
-      zone.appendChild(draggedEl);
+      workspace.appendChild(draggedEl);
     }
   });
 });
 
 document.getElementById("clearWorkBtn").addEventListener("click", () => {
-  workZones.forEach(z => z.innerHTML = "");
+  workspace.innerHTML = "";
+  clearInk();
 });
 
+document.getElementById("addBreakBtn").addEventListener("click", () => {
+  const def = { id:"break", text:"|", type:"breaker" };
+  const breakTile = makeTile(def, false);
+  breakTile.style.fontSize = "30px";
+  breakTile.style.fontWeight = "900";
+  breakTile.title = "Syllable break";
+  workspace.appendChild(breakTile);
+});
+
+// Fullscreen
 const fsBtn = document.getElementById("fullscreenBtn");
 const fsWrap = document.getElementById("fsWrap");
-
-fsBtn.addEventListener("click", () => {
-  if(!document.fullscreenElement) fsWrap.requestFullscreen();
-  else document.exitFullscreen();
+function isFs(){ return !!document.fullscreenElement; }
+function updateFsBtn(){ fsBtn.textContent = isFs() ? "Exit full screen" : "Full screen"; }
+fsBtn.addEventListener("click", async () => {
+  try{
+    if(!isFs()) await fsWrap.requestFullscreen();
+    else await document.exitFullscreen();
+  }catch(_){}
+  updateFsBtn();
 });
+document.addEventListener("fullscreenchange", updateFsBtn);
+updateFsBtn();
+
+// Pen + eraser
+const penBtn = document.getElementById("penBtn");
+const eraserBtn = document.getElementById("eraserBtn");
+const clearInkBtn = document.getElementById("clearInkBtn");
+const canvas = document.getElementById("inkCanvas");
+const ctx = canvas.getContext("2d");
+
+let drawing = false;
+let last = null;
+
+function resizeCanvasToWorkspace(){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  setToolStyle();
+}
+
+function setToolStyle(){
+  if(toolMode === "pen"){
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 4;
+  }else{
+    // Eraser "punches out" the ink regardless of background
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.lineWidth = 18;
+    ctx.strokeStyle = "rgba(0,0,0,1)";
+  }
+}
+
+function clearInk(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function setMode(mode){
+  toolMode = mode;
+  penBtn.classList.toggle("toggled", mode === "pen");
+  eraserBtn.classList.toggle("toggled", mode === "eraser");
+  setToolStyle();
+}
+
+function pointFromEvent(e){
+  const rect = canvas.getBoundingClientRect();
+  return { x: (e.clientX - rect.left), y: (e.clientY - rect.top) };
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  drawing = true;
+  canvas.setPointerCapture(e.pointerId);
+  last = pointFromEvent(e);
+});
+
+canvas.addEventListener("pointermove", (e) => {
+  if(!drawing) return;
+  const p = pointFromEvent(e);
+  ctx.beginPath();
+  ctx.moveTo(last.x, last.y);
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  last = p;
+});
+
+function stopDraw(){
+  drawing = false;
+  last = null;
+}
+canvas.addEventListener("pointerup", stopDraw);
+canvas.addEventListener("pointercancel", stopDraw);
+
+penBtn.addEventListener("click", () => setMode("pen"));
+eraserBtn.addEventListener("click", () => setMode("eraser"));
+clearInkBtn.addEventListener("click", clearInk);
+
+// Resize alignment
+const ro = new ResizeObserver(() => resizeCanvasToWorkspace());
+ro.observe(document.querySelector(".workWrap"));
+setTimeout(resizeCanvasToWorkspace, 0);
+window.addEventListener("resize", resizeCanvasToWorkspace);
+
+// Default
+setMode("pen");
 </script>
 </body>
 </html>
