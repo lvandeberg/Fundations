@@ -97,7 +97,6 @@
       border-width:2px;
     }
 
-    /* Workspace wrapper for drawing canvas overlay */
     .workWrap{
       position:relative;
     }
@@ -112,7 +111,7 @@
       height:100%;
       z-index:2;
       border-radius:var(--radius);
-      pointer-events:auto;
+      pointer-events:none;
       touch-action:none;
     }
 
@@ -152,17 +151,12 @@
     .ending{ background:#cfe9d6; }
     .breaker{ background:#eef2f7; }
 
-    /* Mini tool row near workspace */
     .workTools{
       margin:12px 0 8px 0;
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
-    }
-    .workTools .toolHint{
-      font-size:12px;
-      color:#6b7280;
     }
 
     .keyBox{
@@ -172,19 +166,6 @@
       border-radius:14px;
       background:var(--card);
       box-shadow:var(--shadow);
-    }
-    .keyGrid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:8px;
-    }
-    @media (min-width: 900px){
-      .keyGrid{ grid-template-columns: 1fr 1fr; }
-    }
-    .keyItem{
-      font-size:13px;
-      line-height:1.35;
-      color:#374151;
     }
   </style>
 </head>
@@ -201,45 +182,31 @@
 
   <main>
     <section>
-      <p class="sectionTitle">Tray (alphabetical order)</p>
+      <p class="sectionTitle">Tray</p>
       <p class="hint">Drag from the tray to create tiles. Drop tiles back here to remove them.</p>
       <div class="dropzone tray" id="tray"></div>
     </section>
 
-    <div class="keyBox">
-      <p class="sectionTitle" style="margin-bottom:6px;">Marking key</p>
-      <div class="keyGrid">
-        <div class="keyItem"><strong>Base word:</strong> Underline the base word.</div>
-        <div class="keyItem"><strong>Prefix / Suffix:</strong> Circle the prefix or suffix.</div>
-        <div class="keyItem"><strong>Vowels:</strong> Dot or mark above vowels.</div>
-        <div class="keyItem"><strong>Syllables:</strong> Add a <strong>|</strong> break tile between syllables, then circle each syllable.</div>
-        <div class="keyItem"><strong>Remove tiles:</strong> Drop a tile back onto the tray to delete it.</div>
-        <div class="keyItem"><strong>Pen + Eraser:</strong> Use the buttons by the workspace to write and erase.</div>
-      </div>
-    </div>
-
     <section style="margin-top:14px;">
       <p class="sectionTitle">Workspace</p>
-      <p class="hint">Drag tiles to build words. Use the pen to underline and circle. Use eraser to remove pen marks.</p>
-
-      <div class="workTools" aria-label="workspace tools">
-        <button id="penBtn" class="primary toggled">Pen</button>
+      <div class="workTools">
+        <button id="dragBtn" class="primary toggled">Drag tiles</button>
+        <button id="penBtn">Pen</button>
         <button id="eraserBtn">Eraser</button>
         <button id="clearInkBtn">Clear pen</button>
         <button id="addBreakBtn" class="primary">Add | break</button>
-        <span class="toolHint">Tip: On touch screens, use one finger to draw. Drag tiles with a longer press then move.</span>
       </div>
 
       <div class="workWrap">
         <div class="dropzone workzone" id="workspace"></div>
-        <canvas id="inkCanvas" aria-label="drawing canvas"></canvas>
+        <canvas id="inkCanvas"></canvas>
       </div>
     </section>
   </main>
 </div>
 
 <script>
-let toolMode = "pen"; // "pen" or "eraser"
+let mode = "drag"; // drag | pen | eraser
 
 const TILE_DATA = [
   { id:"a", text:"a", type:"vowel" },
@@ -290,211 +257,115 @@ const TILE_DATA = [
 
 const tray = document.getElementById("tray");
 const workspace = document.getElementById("workspace");
-const allZones = [tray, workspace];
+const canvas = document.getElementById("inkCanvas");
+const ctx = canvas.getContext("2d");
 
 let draggedEl = null;
 const defById = new Map(TILE_DATA.map(t => [t.id, t]));
-
-function uid(){
-  return "tile_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
-}
 
 function makeTile(def, template){
   const el = document.createElement("div");
   el.className = `tile ${def.type}` + (template ? " template" : "");
   el.textContent = def.text;
   el.draggable = true;
-  el.dataset.tileId = def.id;
   el.dataset.template = template ? "1" : "0";
-  if(!template) el.dataset.instanceId = uid();
+  el.dataset.tileId = def.id;
 
   el.addEventListener("dblclick", () => {
-    if(el.dataset.template === "1") return;
-    el.remove();
+    if(el.dataset.template === "0") el.remove();
   });
 
   el.addEventListener("dragstart", e => {
+    if(mode !== "drag") return;
     draggedEl = el;
-    const payload = {
-      kind: el.dataset.template === "1" ? "template" : "instance",
-      tileId: def.id
-    };
-    const payloadStr = JSON.stringify(payload);
-    e.dataTransfer.setData("application/json", payloadStr);
-    e.dataTransfer.setData("text/plain", payloadStr);
+    const payload = JSON.stringify({ tileId: def.id, template: el.dataset.template });
+    e.dataTransfer.setData("text/plain", payload);
   });
 
-  el.addEventListener("dragend", () => {
-    draggedEl = null;
-    allZones.forEach(z => z.classList.remove("active"));
-  });
+  el.addEventListener("dragend", () => draggedEl = null);
 
   return el;
 }
 
-// Build tray
 TILE_DATA.forEach(def => tray.appendChild(makeTile(def, true)));
 
-// Drag/drop
-allZones.forEach(zone => {
+[tray, workspace].forEach(zone => {
   zone.addEventListener("dragover", e => {
+    if(mode !== "drag") return;
     e.preventDefault();
-    zone.classList.add("active");
-
-    // Reorder within workspace by hovering over another tile
-    if(zone !== workspace) return;
-    const overTile = (e.target && e.target.classList && e.target.classList.contains("tile")) ? e.target : null;
-    if(!overTile) return;
-
-    if(draggedEl && draggedEl.dataset.template === "0" && overTile !== draggedEl){
-      workspace.insertBefore(draggedEl, overTile);
-    }
   });
 
-  zone.addEventListener("dragleave", () => zone.classList.remove("active"));
-
   zone.addEventListener("drop", e => {
+    if(mode !== "drag") return;
     e.preventDefault();
-    zone.classList.remove("active");
-
-    const payloadStr = e.dataTransfer.getData("application/json") || e.dataTransfer.getData("text/plain");
-    let payload = null;
-    try{ payload = JSON.parse(payloadStr); }catch(_){ payload = null; }
-    if(!payload || !payload.tileId) return;
-
-    // Drop on tray deletes instances
+    const data = JSON.parse(e.dataTransfer.getData("text/plain"));
     if(zone === tray){
-      if(draggedEl && draggedEl.dataset.template === "0"){
-        draggedEl.remove();
-      }
+      if(draggedEl && draggedEl.dataset.template === "0") draggedEl.remove();
       return;
     }
-
-    // Drop into workspace
-    if(payload.kind === "template"){
-      const def = defById.get(payload.tileId);
-      if(!def) return;
+    if(data.template === "1"){
+      const def = defById.get(data.tileId);
       workspace.appendChild(makeTile(def, false));
-    } else if(draggedEl){
+    }else if(draggedEl){
       workspace.appendChild(draggedEl);
     }
   });
 });
 
-document.getElementById("clearWorkBtn").addEventListener("click", () => {
-  workspace.innerHTML = "";
-  clearInk();
-});
-
-document.getElementById("addBreakBtn").addEventListener("click", () => {
-  const def = { id:"break", text:"|", type:"breaker" };
-  const breakTile = makeTile(def, false);
-  breakTile.style.fontSize = "30px";
-  breakTile.style.fontWeight = "900";
-  breakTile.title = "Syllable break";
-  workspace.appendChild(breakTile);
-});
-
-// Fullscreen
-const fsBtn = document.getElementById("fullscreenBtn");
-const fsWrap = document.getElementById("fsWrap");
-function isFs(){ return !!document.fullscreenElement; }
-function updateFsBtn(){ fsBtn.textContent = isFs() ? "Exit full screen" : "Full screen"; }
-fsBtn.addEventListener("click", async () => {
-  try{
-    if(!isFs()) await fsWrap.requestFullscreen();
-    else await document.exitFullscreen();
-  }catch(_){}
-  updateFsBtn();
-});
-document.addEventListener("fullscreenchange", updateFsBtn);
-updateFsBtn();
-
-// Pen + eraser
-const penBtn = document.getElementById("penBtn");
-const eraserBtn = document.getElementById("eraserBtn");
-const clearInkBtn = document.getElementById("clearInkBtn");
-const canvas = document.getElementById("inkCanvas");
-const ctx = canvas.getContext("2d");
-
-let drawing = false;
-let last = null;
-
-function resizeCanvasToWorkspace(){
-  const rect = canvas.getBoundingClientRect();
+function resizeCanvas(){
+  const r = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  canvas.width = r.width * dpr;
+  canvas.height = r.height * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  setToolStyle();
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+let drawing=false, last=null;
+function setMode(m){
+  mode=m;
+  canvas.style.pointerEvents = (m==="drag") ? "none" : "auto";
+  document.getElementById("dragBtn").classList.toggle("toggled", m==="drag");
+  document.getElementById("penBtn").classList.toggle("toggled", m==="pen");
+  document.getElementById("eraserBtn").classList.toggle("toggled", m==="eraser");
+  ctx.globalCompositeOperation = (m==="eraser") ? "destination-out" : "source-over";
+  ctx.lineWidth = (m==="eraser") ? 18 : 4;
+  ctx.strokeStyle = "#111827";
 }
 
-function setToolStyle(){
-  if(toolMode === "pen"){
-    ctx.globalCompositeOperation = "source-over";
-    ctx.strokeStyle = "#111827";
-    ctx.lineWidth = 4;
-  }else{
-    // Eraser "punches out" the ink regardless of background
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.lineWidth = 18;
-    ctx.strokeStyle = "rgba(0,0,0,1)";
-  }
-}
-
-function clearInk(){
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function setMode(mode){
-  toolMode = mode;
-  penBtn.classList.toggle("toggled", mode === "pen");
-  eraserBtn.classList.toggle("toggled", mode === "eraser");
-  setToolStyle();
-}
-
-function pointFromEvent(e){
-  const rect = canvas.getBoundingClientRect();
-  return { x: (e.clientX - rect.left), y: (e.clientY - rect.top) };
-}
-
-canvas.addEventListener("pointerdown", (e) => {
-  drawing = true;
-  canvas.setPointerCapture(e.pointerId);
-  last = pointFromEvent(e);
+canvas.addEventListener("pointerdown", e=>{
+  if(mode==="drag") return;
+  drawing=true;
+  last={x:e.offsetX,y:e.offsetY};
 });
-
-canvas.addEventListener("pointermove", (e) => {
+canvas.addEventListener("pointermove", e=>{
   if(!drawing) return;
-  const p = pointFromEvent(e);
   ctx.beginPath();
-  ctx.moveTo(last.x, last.y);
-  ctx.lineTo(p.x, p.y);
+  ctx.moveTo(last.x,last.y);
+  ctx.lineTo(e.offsetX,e.offsetY);
   ctx.stroke();
-  last = p;
+  last={x:e.offsetX,y:e.offsetY};
 });
+canvas.addEventListener("pointerup", ()=>drawing=false);
+canvas.addEventListener("pointercancel", ()=>drawing=false);
 
-function stopDraw(){
-  drawing = false;
-  last = null;
-}
-canvas.addEventListener("pointerup", stopDraw);
-canvas.addEventListener("pointercancel", stopDraw);
+document.getElementById("dragBtn").onclick=()=>setMode("drag");
+document.getElementById("penBtn").onclick=()=>setMode("pen");
+document.getElementById("eraserBtn").onclick=()=>setMode("eraser");
+document.getElementById("clearInkBtn").onclick=()=>ctx.clearRect(0,0,canvas.width,canvas.height);
+document.getElementById("clearWorkBtn").onclick=()=>{workspace.innerHTML="";ctx.clearRect(0,0,canvas.width,canvas.height);};
 
-penBtn.addEventListener("click", () => setMode("pen"));
-eraserBtn.addEventListener("click", () => setMode("eraser"));
-clearInkBtn.addEventListener("click", clearInk);
+const fsBtn=document.getElementById("fullscreenBtn");
+const fsWrap=document.getElementById("fsWrap");
+fsBtn.onclick=async()=>{
+  if(!document.fullscreenElement) await fsWrap.requestFullscreen();
+  else await document.exitFullscreen();
+};
 
-// Resize alignment
-const ro = new ResizeObserver(() => resizeCanvasToWorkspace());
-ro.observe(document.querySelector(".workWrap"));
-setTimeout(resizeCanvasToWorkspace, 0);
-window.addEventListener("resize", resizeCanvasToWorkspace);
-
-// Default
-setMode("pen");
+setMode("drag");
 </script>
 </body>
 </html>
